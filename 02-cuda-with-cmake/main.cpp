@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "testkernel.cuh"
+#include "testkernel.h"
 
 #define N 1000
 
