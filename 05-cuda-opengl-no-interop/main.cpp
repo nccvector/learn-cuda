@@ -79,15 +79,12 @@ int main() {
     return -1;
   }
   glfwMakeContextCurrent(window);
+  glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
 
   if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
-
-  glViewport(0, 0, WIDTH, HEIGHT);
-
-  glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
 
   // Load shader and compile shaders
   std::string vertexShaderSource;
@@ -116,10 +113,10 @@ int main() {
   // Creating quad
   float vertices[] = {
       // positions          // colors           // texture coords
-      0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
-      0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
-      -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
+      1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
+      1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+      -1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
+      -1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
   };
   unsigned int indices[] = {
       0, 1, 3, // first triangle
@@ -168,10 +165,7 @@ int main() {
   std::vector<uchar3> hostImage;
   hostImage.reserve(WIDTH * HEIGHT);
 
-  // Rendering loop
   while (!glfwWindowShouldClose(window)) {
-    glfwPollEvents();
-
     glClearColor(0.2f, 0.2f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
