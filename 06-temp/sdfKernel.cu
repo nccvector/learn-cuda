@@ -39,9 +39,13 @@ __global__ void sdfKernel(cudaSurfaceObject_t &image, int width, int height, Cir
       255,
   };
 
-  surf2Dwrite(data, image, (int)(px), (int)py, cudaBoundaryModeClamp);
+  surf2Dwrite(data, image, sizeof(uchar4) * i, j, cudaBoundaryModeClamp);
 }
 
 void wrapperSdfKernel(cudaSurfaceObject_t &image, int width, int height, Circle *circles, int n) {
+  dim3 block(width/2, 1, 1);
+  dim3 grid(2, width, 1);
   sdfKernel<<<width, height>>>(image, width, height, circles, n);
+
+  cudaDeviceSynchronize();
 }

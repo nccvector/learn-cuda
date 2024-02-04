@@ -56,10 +56,6 @@ void cudaRenderImageToDeviceBuffer(cudaSurfaceObject_t &d_image) {
   cudaMemcpy(dCircles, circles.data(), sizeof(Circle) * circles.size(), cudaMemcpyHostToDevice);
 
   //================================================================================
-  // Create device vars
-  // Dedicate memory on device
-  cudaMalloc((void **) &d_image, sizeof(uchar4) * WIDTH * HEIGHT);
-
   // Execute kernel
   wrapperSdfKernel(d_image, WIDTH, HEIGHT, dCircles, circles.size());
 }
@@ -147,7 +143,7 @@ int main() {
   glEnableVertexAttribArray(2);
 
   // Create Texture
-  unsigned int glTexture;
+  GLuint glTexture;
   glGenTextures(1, &glTexture);
   glBindTexture(GL_TEXTURE_2D, glTexture);
 
@@ -156,26 +152,19 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  std::vector<uchar4> dummy = std::vector<uchar4>(WIDTH * HEIGHT, {255, 0, 255, 255});
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, dummy.data());
 
   glBindTexture(GL_TEXTURE_2D, 0);
 
   // Create cuda graphics resource
-  cudaGraphicsResource *cudaGraphicsResource;
+  cudaGraphicsResource_t cudaGraphicsResource;
   cudaGraphicsGLRegisterImage(
       &cudaGraphicsResource,
       glTexture,
       GL_TEXTURE_2D,
       cudaGraphicsRegisterFlagsWriteDiscard
   );
-
-//  // Create cuda render buffer
-//  uchar4 *cudaDeviceRenderBuffer;
-//  cudaMalloc((void **) &cudaDeviceRenderBuffer, sizeof(uchar4) * WIDTH * HEIGHT);
-
-  // Create host image
-  std::vector<uchar4> hostImage;
-  hostImage.reserve(WIDTH * HEIGHT);
 
   bool debugFirstFrame = false;
 
@@ -185,7 +174,9 @@ int main() {
 
     cudaArray_t viewCudaArray;
     cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, cudaGraphicsResource, 0, 0);
+
     cudaResourceDesc cudaResourceDesc;
+    memset(&cudaResourceDesc, 0, sizeof(cudaResourceDesc));
     cudaResourceDesc.resType = cudaResourceTypeArray;
     cudaResourceDesc.res.array.array = viewCudaArray;
 
@@ -196,11 +187,13 @@ int main() {
     cudaRenderImageToDeviceBuffer(viewCudaSurfaceObject);
 
     cudaDestroySurfaceObject(viewCudaSurfaceObject);
-
-    // Unmap cuda graphics resources
     cudaGraphicsUnmapResources(1, &cudaGraphicsResource, 0);
 
-    glClearColor(0.2f, 0.2f, 0.0f, 1.0f);
+//  cudaGraphicsUnregisterResource(cudaGraphicsResource);
+
+    cudaStreamSynchronize(0);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // bind textures on corresponding texture units
