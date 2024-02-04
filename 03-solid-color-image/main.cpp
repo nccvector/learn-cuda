@@ -26,8 +26,8 @@ int main() {
   // Dedicate memory on device
   cudaMalloc((void **) &d_image, sizeof(uchar3) * WIDTH * HEIGHT);
 
-  // Copy host to device
-  cudaMemcpy(d_image, image.data(), sizeof(uchar3) * WIDTH * HEIGHT, cudaMemcpyHostToDevice);
+//  // Copy host to device
+//  cudaMemcpy(d_image, image.data(), sizeof(uchar3) * WIDTH * HEIGHT, cudaMemcpyHostToDevice);
 
   // Execute kernel
   wrapperSolidImageKernel(d_image, WIDTH, HEIGHT, color);
