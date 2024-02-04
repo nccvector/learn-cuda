@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 
 # Specify project and languages (notice: CUDA)
-project(05-cuda-opengl-no-interop LANGUAGES C CXX CUDA)
+project(06-cuda-gl-interop-PBO LANGUAGES C CXX CUDA)
 
 # Set CUDA architecture
 find_package(CUDA REQUIRED)
