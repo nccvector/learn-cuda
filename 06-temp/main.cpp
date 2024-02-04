@@ -38,7 +38,7 @@ void frameBufferSizeCallback(GLFWwindow *window, int width, int height) {
   glViewport(0, 0, width, height);
 }
 
-void cudaRenderImageToDeviceBuffer(cudaSurfaceObject_t &d_image) {
+void cudaRenderImageToDeviceBuffer(uchar4 *&d_image) {
   // Create some spheres on host
   std::vector<Circle> circles;
   for (int i = 0; i < N; i++) {
@@ -153,48 +153,63 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
   std::vector<uchar4> dummy = std::vector<uchar4>(WIDTH * HEIGHT, {255, 0, 255, 255});
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, dummy.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, dummy.data());
 
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  // Create cuda graphics resource
-  cudaGraphicsResource_t cudaGraphicsResource;
-  cudaGraphicsGLRegisterImage(
-      &cudaGraphicsResource,
-      glTexture,
-      GL_TEXTURE_2D,
-      cudaGraphicsRegisterFlagsWriteDiscard
-  );
+  // CREATE A PBO
+  // create pixel buffer object for display
+  cudaGraphicsResource_t cudaPboResource;
+  GLuint pbo;
+  glGenBuffers(1, &pbo);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER, WIDTH * HEIGHT * sizeof(uchar4),
+               0, GL_STREAM_DRAW);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+  // register this buffer object with CUDA
+  cudaGraphicsGLRegisterBuffer(
+      &cudaPboResource, pbo, cudaGraphicsMapFlagsWriteDiscard);
 
   bool debugFirstFrame = false;
 
   while (!glfwWindowShouldClose(window)) {
-    // Map device ptr to the cudaGraphicsResource
-    cudaGraphicsMapResources(1, &cudaGraphicsResource, 0);
+    // Create device image buffer
+    uchar4 *deviceImage;
 
-    cudaArray_t viewCudaArray;
-    cudaGraphicsSubResourceGetMappedArray(&viewCudaArray, cudaGraphicsResource, 0, 0);
+    // Map the deviceImage to PBO
+    cudaGraphicsMapResources(1, &cudaPboResource, 0);
+    size_t numBytes;
+    cudaGraphicsResourceGetMappedPointer(
+        (void **) &deviceImage,
+        &numBytes,
+        cudaPboResource
+    );
 
-    cudaResourceDesc cudaResourceDesc;
-    memset(&cudaResourceDesc, 0, sizeof(cudaResourceDesc));
-    cudaResourceDesc.resType = cudaResourceTypeArray;
-    cudaResourceDesc.res.array.array = viewCudaArray;
+    // Clear the image memory
+    cudaMemset(deviceImage, 0, sizeof(uchar4) * WIDTH * HEIGHT);
 
-    cudaSurfaceObject_t viewCudaSurfaceObject;
-    cudaCreateSurfaceObject(&viewCudaSurfaceObject, &cudaResourceDesc);
+    // Render
+    cudaRenderImageToDeviceBuffer(deviceImage);
 
-    // Render cuda image
-    cudaRenderImageToDeviceBuffer(viewCudaSurfaceObject);
-
-    cudaDestroySurfaceObject(viewCudaSurfaceObject);
-    cudaGraphicsUnmapResources(1, &cudaGraphicsResource, 0);
-
-//  cudaGraphicsUnregisterResource(cudaGraphicsResource);
+    // Unmap resource
+    cudaGraphicsUnmapResources(1, &cudaPboResource, 0);
 
     cudaStreamSynchronize(0);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw image from PBO
+    glDisable(GL_DEPTH_TEST);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    // copy from pbo to texture
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+    glBindTexture(GL_TEXTURE_2D, glTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, WIDTH, HEIGHT, GL_RGBA,
+                    GL_UNSIGNED_BYTE, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     // bind textures on corresponding texture units
     glActiveTexture(GL_TEXTURE0);

@@ -3,4 +3,4 @@ struct Circle{
   float radius;
 };
 
-extern "C" void wrapperSdfKernel(cudaSurfaceObject_t &image, int width, int height, Circle *circles, int n);
+extern "C" void wrapperSdfKernel(uchar4 *image, int width, int height, Circle *circles, int n);
