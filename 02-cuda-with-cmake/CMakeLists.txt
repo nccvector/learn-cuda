@@ -4,15 +4,19 @@ cmake_minimum_required(VERSION 3.0.0)
 project(cwc LANGUAGES CXX CUDA)
 
 # Set CUDA architecture
-find_package(CUDA REQUIRED)
-set(CUDA_MIN_SM_TARGET sm_50 CACHE STRING "Minimum CUDA SM architecture to use for compilation.")
+find_package(CUDAToolkit REQUIRED)
+set(CMAKE_CUDA_ARCHITECTURES "50")
 
 include_directories(
-        "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}"
+        "${CUDAToolkit_INCLUDE_DIRS}"
 )
 
 # Add cpp and cu files to target. CMake will automatically compile cu with nvcc
 add_executable(cwc
         main.cpp
         testkernel.cu
+)
+
+target_link_libraries(cwc
+	CUDA::cudart
 )
